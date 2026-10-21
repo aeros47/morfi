@@ -78,6 +78,9 @@ details{font-size:13px;color:var(--mut);margin-bottom:10px}
 <nav id="nav"></nav>
 <div id="modal" onclick="if(event.target===this)closeModal()"><div id="mbox"></div></div>
 
+<!-- Configuración: primero el ejemplo público; si existe config.js (privado, no se sube a git), lo reemplaza -->
+<script src="config.example.js"></script>
+<script src="config.js" onerror="void 0"></script>
 <script src="data.js"></script>
 <script>
 /* ===================== DATOS (ver data.js) ===================== */
@@ -173,7 +176,7 @@ function showMeal(id){
   h+='<div style="margin-bottom:8px">'+badges(m)+' <span class="mut">'+(m.type==='AC'?'Almuerzo o cena':SLOTN[m.type])+'</span></div>';
   h+='<div class="mut" style="margin-bottom:6px">Ingredientes para '+n+' '+(n===1?'persona':'personas')+':</div>';
   m.ings.forEach(function(i){h+='<div class="it"><span>'+i.n+'</span><span class="q">'+fmtQ(i.q*n,i.u)+'</span></div>';});
-  var tp=m.tip;if(S.sel.indexOf('d')>=0&&!tp)tp='Dante: sumar ralladito nutritivo (sésamo molido + levadura nutricional + queso) y ofrecerlo sin presionar.';
+  var tp=m.tip;if(!tp)PROFILES.forEach(function(p){if(!tp&&p.tipComida&&S.sel.indexOf(p.k)>=0)tp=p.tipComida;});
   if(tp)h+='<div class="card" style="margin-top:10px;background:var(--soft)">💡 '+tp+'</div>';
   $('#mbox').innerHTML=h;$('#modal').classList.add('show');
 }
@@ -228,14 +231,10 @@ function exclHTML(){
   return '<details><summary>🚫 Comidas excluidas ('+tot+')</summary>'+(h||'<p>Todavía no excluiste ninguna.</p>')+'</details>';
 }
 function critHTML(){
-  var L=function(t,u){return '<a href="'+u+'" target="_blank" rel="noopener">'+t+'</a>';};
-  return '<details><summary>ℹ️ Criterios por persona (investigación)</summary>'+
-  '<p><b>Abel</b> – plan bajo en carbohidratos y alto en grasa, sin gluten, sin legumbres ni maní; cenas sin vaca/cerdo; papa, batata y zapallo solo en almuerzos; fruta 1–2 por día, no de noche; cena antes de las 20:30–21.<br>'+
-  '⚠️ Por el ácido úrico: se excluyen vísceras (hígado) y mariscos, y se prefieren lácteos, huevos, verduras y porciones moderadas de carne; evitar alcohol y azúcar/fructosa y tomar mucha agua ('+L('Mayo Clinic','https://www.mayoclinic.org/diseases-conditions/gout/in-depth/gout-diet/art-20048524')+'). Al empezar una dieta muy baja en carbohidratos el ácido úrico puede subir transitoriamente ('+L('Virta Health, fuente comercial','https://www.virtahealth.com/faq/keto-gout')+'): consultalo con tu médico o nutricionista.</p>'+
-  '<p><b>Belén</b> – alimentos reales, sin gluten, ≥2 huevos por comida principal, legumbres y pseudocereales, fruta ≤2/día. No come carne ni pescado: solo huevo y lácteos. Cuidar hierro, B12 y proteína ('+L('Coeliac UK','https://www.coeliac.org.uk/')+').</p>'+
-  '<p><b>Dante</b> – solo preparaciones simples y conocidas; se enriquece sin forzar (ralladito nutritivo, semillas molidas, pancitos, chipá), misma estrategia en ambas casas, 2,5 l de agua y bajar de a poco las galletitas dulces. Hoy acepta pocas cosas, casi todo rebozado; la idea es ir saliendo de eso de a poco con platos “puente” parecidos a lo que ya acepta ('+L('food chaining, Akron Children’s','https://www.akronchildrens.org/')+'). Sin presionar ni engañar.</p>'+
-  '<p><b>Isa</b> – 8 años, come de todo y sin pauta propia: plan equilibrado según las Guías Alimentarias para la Población Argentina ('+L('GAPA','https://www.argentina.gob.ar/salud/alimentacion-saludable')+'): mitad verduras, proteínas, cereales integrales y agua. Cualquier comida sin vísceras.</p>'+
-  '<p>Al elegir varias personas se muestran solo comidas que sirven a todas. Las reglas son automáticas por ingrediente y se pueden ajustar.</p></details>';
+  var esc=function(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
+  return '<details><summary>ℹ️ Criterios por persona</summary>'+
+  PROFILES.map(function(p){return '<p><b>'+esc(p.n)+'</b> – '+esc(p.descripcion||'Sin descripción.')+'</p>';}).join('')+
+  '<p>Al elegir varias personas se muestran solo comidas que sirven a todas. Las reglas son automáticas por ingrediente y se ajustan en la configuración.</p></details>';
 }
 function renderTF(id,key,fn,all){
   var opts=(all?[['T','Todas']]:[]).concat([['A','Almuerzo'],['C','Cena'],['M','Merienda']]);

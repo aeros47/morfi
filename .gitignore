@@ -1,0 +1,4 @@
+# Configuración privada (tus datos reales): nunca se sube a git
+config.js
+.env
+*.backup.json

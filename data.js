@@ -2,14 +2,11 @@
    Ingredientes: Nombre|unidad|categoría|flags
    Flags: M carne/pescado/fiambre, R carne roja (vaca/cerdo), O vísceras, S mariscos,
           P almidón (papa, batata, mandioca, polenta), L legumbre, G gluten, W cereal/pasta, Z masa madre
-   Comidas: Nombre|tipo(A almuerzo, C cena, AC ambas, M merienda)|k si es simple para Dante|Ingred:cantidad por persona|tip
+   Comidas: Nombre|tipo(A almuerzo, C cena, AC ambas, M merienda)|k si es un plato simple|Ingred:cantidad por persona|tip
+   Los perfiles y sus reglas vienen de config.js (o config.example.js), no de este archivo.
 */
-const PROFILES=[
-  {k:'a',n:'Abel',c:'#0d9488'},
-  {k:'b',n:'Belén',c:'#16a34a'},
-  {k:'d',n:'Dante',c:'#d97706'},
-  {k:'i',n:'Isa',c:'#0284c7'}
-];
+const CONFIG=(typeof window!=='undefined'&&window.MORFI_CONFIG)||{perfiles:[]};
+const PROFILES=CONFIG.perfiles;
 
 const ING_RAW=`
 Pollo|g|C|M
@@ -394,29 +391,31 @@ Pan chato de semillas con queso|M|-|Semillas (mix):20,Queso fresco:40,Huevo:1
 Frutos secos y manzana|M|-|Frutos secos:20,Manzana:1
 `;
 
-/* ===== Reglas por perfil (a=Abel b=Belén d=Dante i=Isa) ===== */
+/* ===== Reglas por perfil (definidas en la configuración de cada persona) ===== */
 function flagsOf(m){
   var s={};
   m.ings.forEach(function(i){for(var x=0;x<i.f.length;x++)s[i.f[x]]=1;});
   return s;
 }
 function eligible(m,p,slot){
-  var f=flagsOf(m);
-  if(p==='a'){
-    // sin legumbres, vísceras ni mariscos (ácido úrico); sin gluten/cereales salvo masa madre
-    if(f.L||f.O||f.S)return false;
+  var pr=PROFILES.find(function(x){return x.k===p;});
+  if(!pr)return false;
+  var r=pr.reglas||{},f=flagsOf(m);
+  if(r.sinCarne&&f.M)return false;
+  if(r.sinGluten&&f.G)return false;
+  if(r.sinLegumbres&&f.L)return false;
+  if(r.sinMariscos&&f.S)return false;
+  if(r.sinVisceras&&f.O)return false;
+  if(r.soloSimples&&!m.k)return false;
+  if(r.sinCereales){
     for(var j=0;j<m.ings.length;j++){
       var g=m.ings[j].f;
       if((g.indexOf('G')>=0||g.indexOf('W')>=0)&&g.indexOf('Z')<0)return false;
     }
-    // cenas: sin carne vacuna/cerdo ni almidones (papa, batata, mandioca, polenta)
-    if(slot==='C'&&(f.R||f.P))return false;
-    return true;
   }
-  if(p==='b')return !f.M&&!f.G&&!f.O;   // vegetariana (huevo y lácteos sí), sin gluten
-  if(p==='d')return m.k&&!f.S&&!f.O;    // solo platos simples y conocidos
-  if(p==='i')return !f.O;               // sin pauta propia: todo menos vísceras
-  return false;
+  if(slot==='C'&&r.cenaSinCarneRoja&&f.R)return false;
+  if(slot==='C'&&r.cenaSinAlmidon&&f.P)return false;
+  return true;
 }
 
 function buildData(){
